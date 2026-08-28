@@ -4,6 +4,8 @@
 
 ### ▶ [https://hugesesame.github.io/json-guide/](https://hugesesame.github.io/json-guide/)
 
+[![教材のトップ画面](assets/screenshot-desktop.png)](https://hugesesame.github.io/json-guide/)
+
 ---
 
 ## この教材について
@@ -51,6 +53,10 @@ MCPの接続設定、AIツールの設定ファイル、AIへの出力形式の�
 
 スマホでの利用を軸に設計し、ラップトップにも対応するレスポンシブ構成です。タップ領域は44px以上を確保しています。もくじの自動生成、スクロール進捗バー、現在地のハイライトを備えています。
 
+<img src="assets/screenshot-mobile.png" width="300" alt="スマートフォンでの表示">
+
+表とコードブロックは、狭い画面ではそれぞれの内側だけが横スクロールします。ページ本体が横に溢れる箇所はありません。
+
 ## ローカルで開く
 
 ビルドは不要です。
@@ -73,6 +79,12 @@ json-guide/
 ## デザイン
 
 配色・タイポグラフィ・余白・コンポーネントの規約は [design.md](design.md) にまとめています。単一アクセント（Action Blue）、影を使わない階層表現、明暗タイルの交互配置、負のトラッキングといった方針に基づいています。
+
+## ライセンス
+
+[Creative Commons Attribution 4.0 International（CC BY 4.0）](LICENSE)
+
+**クレジットを表示すれば、改変も再配布も商用利用も自由です。** 社内研修の資料として配ったり、自分の講座向けに章を組み替えたりしていただいて構いません。その際は、出典としてこのリポジトリへのリンクを添えてください。
 
 ## 注記
 
