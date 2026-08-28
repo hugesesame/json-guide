@@ -2,7 +2,13 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- viewport-fit=cover は意図的に指定しない。
+     一部の Android アプリ内ブラウザ（LINE など）は、自前の UI の下に
+     ページを描画しているにもかかわらず env(safe-area-inset-top) に
+     0 でない値を返す。その値を信じるとヘッダーの高さが狂う。
+     この教材は画面の端まで描画する必要がないため、ブラウザに安全領域の
+     管理を任せる。これにより env() は全環境で 0 になる。 -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="AI初心者・非エンジニアのためのJSON入門。AIエージェントの設定ファイルを読めて、直せて、書けるようになる1枚完結の教材。">
 <meta name="color-scheme" content="light">
 <title>JSONがわかると、AIが動き出す — 非エンジニアのためのJSON入門</title>
