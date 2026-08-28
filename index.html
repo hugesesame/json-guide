@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="AI初心者・非エンジニアのためのJSON入門。AIエージェントの設定ファイルを読めて、直せて、書けるようになる1枚完結の教材。">
+<meta name="color-scheme" content="light">
+<title>JSONがわかると、AIが動き出す — 非エンジニアのためのJSON入門</title>
+<style>
+/* ============================================================
+   Design tokens  ( design.md 準拠 )
+   ============================================================ */
+:root{
+  /* Brand & accent : 単一アクセント */
+  --primary:#0066cc;
+  --primary-focus:#0071e3;
+  --primary-on-dark:#2997ff;
+
+  /* Surface */
+  --canvas:#ffffff;
+  --parchment:#f5f5f7;
+  --pearl:#fafafc;
+  --tile-1:#272729;
+  --tile-2:#2a2a2c;
+  --tile-3:#252527;
+  --black:#000000;
+
+  /* Text */
+  --ink:#1d1d1f;
+  --on-dark:#ffffff;
+  --body-muted:#cccccc;
+  --ink-80:#333333;
+  --ink-48:#7a7a7a;
+
+  /* Hairlines */
+  --divider-soft:rgba(0,0,0,.04);
+  --hairline:#e0e0e0;
+
+  /* Spacing */
+  --xxs:4px; --xs:8px; --sm:12px; --md:17px; --lg:24px; --xl:32px; --xxl:48px; --section:80px;
+
+  /* Radius */
+  --r-sm:8px; --r-md:11px; --r-lg:18px; --r-pill:9999px;
+
+  /* Type */
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Noto Sans Mono",monospace;
+
+  --nav-h:44px;
+
+  /* Code syntax ( 機能上の必要最小限 ) */
+  --code-bg:#1d1d1f;
+  --code-key:#7cc4ff;
+  --code-str:#a5d6a7;
+  --code-num:#ffcc80;
+  --code-bool:#ce93d8;
+  --code-punc:#ff9e80;
+  --code-plain:#e8e8ea;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-h) + 12px)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{
+  margin:0;
+  font-family:var(--font);
+  font-size:17px;
+  font-weight:400;
+  line-height:1.85;
+  letter-spacing:.01em;
+  color:var(--ink);
+  background:var(--canvas);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+a{color:var(--primary);text-underline-offset:3px}
+button{font:inherit;color:inherit}
+
+/* ============================================================
+   Global nav
+   ============================================================ */
+.global-nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:var(--nav-h);
+  background:var(--black);
+  color:var(--on-dark);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;
+  padding-top:env(safe-area-inset-top);
+}
+.global-nav__brand{
+  font-size:13px;font-weight:600;letter-spacing:-.01em;
+  color:var(--on-dark);text-decoration:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.global-nav__brand span{color:var(--primary-on-dark)}
+.nav-toggle{
+  appearance:none;border:0;background:rgba(255,255,255,.14);
+  color:var(--on-dark);
+  font-size:13px;letter-spacing:-.01em;
+  border-radius:var(--r-sm);
+  min-height:30px;padding:6px 14px;
+  display:inline-flex;align-items:center;gap:7px;
+  cursor:pointer;transition:transform .15s ease;
+  flex:0 0 auto;
+}
+.nav-toggle:active{transform:scale(.95)}
+.nav-toggle:focus-visible{outline:2px solid var(--primary-focus);outline-offset:2px}
+.nav-toggle__bars{display:inline-block;width:13px;height:9px;position:relative}
+.nav-toggle__bars::before,.nav-toggle__bars::after{
+  content:"";position:absolute;left:0;right:0;height:1.5px;background:currentColor;border-radius:2px;
+  transition:transform .22s ease;
+}
+.nav-toggle__bars::before{top:0}
+.nav-toggle__bars::after{bottom:0}
+body.tray-open .nav-toggle__bars::before{transform:translateY(3.75px) rotate(45deg)}
+body.tray-open .nav-toggle__bars::after{transform:translateY(-3.75px) rotate(-45deg)}
+
+/* progress line */
+.progress{
+  position:fixed;top:calc(var(--nav-h) + env(safe-area-inset-top));left:0;z-index:101;
+  height:2px;width:0;background:var(--primary);
+  transition:width .12s linear;
+}
+
+/* ============================================================
+   Chapter tray
+   ============================================================ */
+.tray{
+  position:fixed;inset:0;z-index:99;
+  background:rgba(245,245,247,.86);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  backdrop-filter:saturate(180%) blur(20px);
+  padding:calc(var(--nav-h) + env(safe-area-inset-top) + 20px) 20px calc(40px + env(safe-area-inset-bottom));
+  overflow-y:auto;
+  opacity:0;visibility:hidden;transform:translateY(-8px);
+  transition:opacity .24s ease,transform .24s ease,visibility .24s;
+}
+body.tray-open{overflow:hidden}
+body.tray-open .tray{opacity:1;visibility:visible;transform:none}
+.tray__label{
+  font-size:12px;font-weight:600;letter-spacing:.06em;
+  color:var(--ink-48);text-transform:uppercase;
+  margin:0 0 var(--sm);
+}
+.tray__list{list-style:none;margin:0;padding:0;max-width:680px}
+.tray__list li{border-bottom:1px solid rgba(0,0,0,.07)}
+.tray__list a{
+  display:flex;align-items:baseline;gap:14px;
+  min-height:52px;padding:11px 2px;
+  color:var(--ink);text-decoration:none;
+  font-size:17px;line-height:1.4;letter-spacing:-.01em;
+}
+.tray__list a:active{color:var(--primary)}
+.tray__num{
+  flex:0 0 auto;width:26px;
+  font-size:13px;font-weight:600;color:var(--primary);
+  font-variant-numeric:tabular-nums;
+}
+.tray__list a.is-current{color:var(--primary);font-weight:600}
+
+/* ============================================================
+   Tiles
+   ============================================================ */
+.tile{
+  padding:var(--xxl) 20px;
+  padding-left:max(20px,env(safe-area-inset-left));
+  padding-right:max(20px,env(safe-area-inset-right));
+}
+.tile--light{background:var(--canvas)}
+.tile--parchment{background:var(--parchment)}
+.tile--dark{background:var(--tile-1);color:var(--on-dark)}
+.tile--dark-2{background:var(--tile-2);color:var(--on-dark)}
+.tile--dark-3{background:var(--tile-3);color:var(--on-dark)}
+.tile--dark a,.tile--dark-2 a,.tile--dark-3 a{color:var(--primary-on-dark)}
+.wrap{max-width:720px;margin:0 auto}
+.wrap--wide{max-width:980px;margin:0 auto}
+
+/* ============================================================
+   Typography
+   ============================================================ */
+.eyebrow{
+  font-size:13px;font-weight:600;letter-spacing:.08em;
+  color:var(--primary);
+  margin:0 0 var(--sm);
+  display:flex;align-items:center;gap:10px;
+}
+.tile--dark .eyebrow,.tile--dark-2 .eyebrow,.tile--dark-3 .eyebrow{color:var(--primary-on-dark)}
+.eyebrow::after{content:"";flex:1;height:1px;background:currentColor;opacity:.25}
+
+h1{
+  font-size:clamp(30px,8.2vw,56px);
+  font-weight:600;line-height:1.16;letter-spacing:-.022em;
+  margin:0 0 var(--md);
+}
+h2{
+  font-size:clamp(25px,6.4vw,40px);
+  font-weight:600;line-height:1.28;letter-spacing:-.02em;
+  margin:0 0 var(--md);
+}
+h3{
+  font-size:clamp(19px,4.6vw,24px);
+  font-weight:600;line-height:1.42;letter-spacing:-.015em;
+  margin:var(--xl) 0 var(--sm);
+}
+h4{
+  font-size:17px;font-weight:600;line-height:1.5;letter-spacing:-.012em;
+  margin:var(--lg) 0 var(--xs);
+}
+p{margin:0 0 var(--md)}
+p:last-child{margin-bottom:0}
+.lead{
+  font-size:clamp(18px,4.5vw,24px);
+  font-weight:300;line-height:1.62;letter-spacing:0;
+  color:var(--ink-80);
+}
+.tile--dark .lead,.tile--dark-2 .lead,.tile--dark-3 .lead{color:var(--body-muted)}
+strong{font-weight:600}
+.muted{color:var(--ink-48)}
+.tile--dark .muted{color:var(--body-muted)}
+.kbd{
+  font-family:var(--mono);font-size:.88em;
+  background:rgba(0,0,0,.05);border-radius:5px;padding:2px 6px;
+  white-space:nowrap;
+}
+.tile--dark .kbd,.tile--dark-2 .kbd,.tile--dark-3 .kbd{background:rgba(255,255,255,.12)}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:44px;padding:11px 22px;
+  background:var(--primary);color:#fff;
+  font-size:17px;letter-spacing:-.01em;
+  border:0;border-radius:var(--r-pill);
+  text-decoration:none;cursor:pointer;
+  transition:transform .15s ease;
+}
+.btn:active{transform:scale(.95)}
+.btn:focus-visible{outline:2px solid var(--primary-focus);outline-offset:3px}
+.btn--ghost{
+  background:transparent;color:var(--primary);
+  border:1px solid var(--primary);
+}
+.tile--dark .btn--ghost,.tile--dark-2 .btn--ghost,.tile--dark-3 .btn--ghost{
+  color:var(--primary-on-dark);border-color:var(--primary-on-dark);
+}
+.btn-row{display:flex;flex-wrap:wrap;gap:var(--sm);margin-top:var(--lg)}
+
+/* ============================================================
+   Code blocks
+   ============================================================ */
+.code{
+  position:relative;
+  background:var(--code-bg);
+  border-radius:var(--r-lg);
+  margin:var(--lg) 0;
+  overflow:hidden;
+}
+.code__head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 14px 10px 18px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  min-height:44px;
+}
+.code__name{
+  font-family:var(--mono);font-size:12px;letter-spacing:0;
+  color:rgba(255,255,255,.55);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.copy{
+  appearance:none;border:0;background:rgba(255,255,255,.12);
+  color:#fff;font-size:12px;letter-spacing:-.01em;
+  border-radius:var(--r-pill);
+  min-height:32px;padding:6px 14px;
+  cursor:pointer;flex:0 0 auto;
+  transition:transform .15s ease,background .2s ease;
+}
+.copy:active{transform:scale(.95)}
+.copy:focus-visible{outline:2px solid var(--primary-focus);outline-offset:2px}
+.copy.is-done{background:var(--primary)}
+.code pre{
+  margin:0;padding:18px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  font-family:var(--mono);
+  font-size:13.5px;line-height:1.85;
+  color:var(--code-plain);
+  tab-size:2;
+}
+@media (min-width:640px){.code pre{font-size:14.5px}}
+.code pre code{font:inherit}
+.tok-key{color:var(--code-key)}
+.tok-str{color:var(--code-str)}
+.tok-num{color:var(--code-num)}
+.tok-bool{color:var(--code-bool)}
+.tok-punc{color:var(--code-punc)}
+.tok-bad{
+  color:#fff;background:rgba(255,69,58,.85);
+  border-radius:3px;padding:0 2px;
+}
+.code--bad{box-shadow:inset 0 0 0 2px rgba(255,69,58,.55)}
+.code--good{box-shadow:inset 0 0 0 2px rgba(52,199,89,.45)}
+
+/* inline annotation under a code block */
+.code-note{
+  display:flex;gap:10px;align-items:flex-start;
+  font-size:14px;line-height:1.7;color:var(--ink-80);
+  margin:calc(var(--lg) * -1 + 6px) 0 var(--lg);
+  padding:0 4px;
+}
+.tile--dark .code-note,.tile--dark-2 .code-note,.tile--dark-3 .code-note{color:var(--body-muted)}
+.code-note__mark{flex:0 0 auto;color:var(--primary);font-weight:600}
+.tile--dark .code-note__mark{color:var(--primary-on-dark)}
+
+/* ============================================================
+   Callouts / summary cards
+   ============================================================ */
+.remember{
+  background:var(--canvas);
+  border-radius:var(--r-lg);
+  padding:var(--lg);
+  margin:var(--xl) 0 0;
+  box-shadow:inset 0 0 0 1px var(--hairline);
+}
+.tile--dark .remember,.tile--dark-2 .remember,.tile--dark-3 .remember{
+  background:rgba(255,255,255,.07);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.13);
+}
+.remember__title{
+  display:flex;align-items:center;gap:9px;
+  font-size:14px;font-weight:600;letter-spacing:-.01em;
+  color:var(--primary);
+  margin:0 0 var(--sm);
+}
+.tile--dark .remember__title{color:var(--primary-on-dark)}
+.remember__badge{
+  flex:0 0 auto;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:var(--r-pill);
+  background:var(--primary);color:#fff;
+  font-size:12px;font-weight:600;
+}
+.tile--dark .remember__badge{background:var(--primary-on-dark);color:var(--tile-1)}
+.remember ul{margin:0;padding-left:1.15em}
+.remember li{margin-bottom:var(--xs);line-height:1.75}
+.remember li:last-child{margin-bottom:0}
+
+.callout{
+  border-radius:var(--r-lg);
+  padding:var(--lg);
+  margin:var(--lg) 0;
+  background:var(--parchment);
+  box-shadow:inset 0 0 0 1px var(--divider-soft);
+  font-size:16px;line-height:1.8;
+}
+.tile--parchment .callout{background:var(--canvas)}
+.tile--dark .callout,.tile--dark-2 .callout,.tile--dark-3 .callout{
+  background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+}
+.callout__title{font-weight:600;margin:0 0 var(--xs);letter-spacing:-.01em}
+
+/* ============================================================
+   Accordion ( 深掘り専用 )
+   ============================================================ */
+details.dig{
+  border-radius:var(--r-lg);
+  background:var(--parchment);
+  box-shadow:inset 0 0 0 1px var(--divider-soft);
+  margin:var(--lg) 0;
+  overflow:hidden;
+}
+.tile--parchment details.dig{background:var(--canvas)}
+.tile--dark details.dig,.tile--dark-2 details.dig,.tile--dark-3 details.dig{
+  background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+}
+details.dig>summary{
+  list-style:none;cursor:pointer;
+  display:flex;align-items:center;gap:12px;
+  min-height:56px;padding:var(--md) var(--lg);
+  font-size:16px;font-weight:600;letter-spacing:-.012em;
+  transition:transform .15s ease;
+}
+details.dig>summary::-webkit-details-marker{display:none}
+details.dig>summary:active{transform:scale(.99)}
+details.dig>summary:focus-visible{outline:2px solid var(--primary-focus);outline-offset:-2px}
+.dig__chev{
+  flex:0 0 auto;margin-left:auto;
+  width:11px;height:11px;
+  border-right:1.8px solid var(--primary);
+  border-bottom:1.8px solid var(--primary);
+  transform:rotate(45deg) translate(-2px,-2px);
+  transition:transform .22s ease;
+}
+.tile--dark .dig__chev{border-color:var(--primary-on-dark)}
+details.dig[open] .dig__chev{transform:rotate(225deg) translate(-2px,-2px)}
+.dig__body{padding:0 var(--lg) var(--lg);font-size:16px}
+.dig__tag{
+  flex:0 0 auto;
+  font-size:11px;font-weight:600;letter-spacing:.04em;
+  color:var(--primary);
+  border:1px solid currentColor;border-radius:var(--r-pill);
+  padding:2px 9px;
+}
+.tile--dark .dig__tag{color:var(--primary-on-dark)}
+
+/* ============================================================
+   Quiz
+   ============================================================ */
+.quiz{
+  background:var(--canvas);
+  border-radius:var(--r-lg);
+  box-shadow:inset 0 0 0 1px var(--hairline);
+  padding:var(--lg);
+  margin:var(--lg) 0;
+}
+.tile--dark .quiz,.tile--dark-2 .quiz,.tile--dark-3 .quiz{
+  background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.quiz__q{font-weight:600;letter-spacing:-.012em;margin:0 0 var(--sm)}
+.quiz__opts{display:flex;flex-direction:column;gap:var(--xs);margin:var(--sm) 0 0}
+.quiz__opt{
+  appearance:none;text-align:left;
+  background:var(--parchment);border:0;
+  box-shadow:inset 0 0 0 1px var(--divider-soft);
+  border-radius:var(--r-md);
+  min-height:48px;padding:12px 16px;
+  font-size:16px;line-height:1.6;letter-spacing:-.01em;
+  cursor:pointer;
+  transition:transform .15s ease,box-shadow .2s ease,background .2s ease;
+}
+.tile--dark .quiz__opt,.tile--dark-2 .quiz__opt,.tile--dark-3 .quiz__opt{
+  background:rgba(255,255,255,.07);color:var(--on-dark);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+}
+.quiz__opt:active{transform:scale(.98)}
+.quiz__opt:focus-visible{outline:2px solid var(--primary-focus);outline-offset:2px}
+.quiz__opt.is-correct{box-shadow:inset 0 0 0 2px #34c759;background:rgba(52,199,89,.12)}
+.quiz__opt.is-wrong{box-shadow:inset 0 0 0 2px #ff453a;background:rgba(255,69,58,.1)}
+.quiz__opt[disabled]{cursor:default}
+.quiz__fb{
+  margin-top:var(--sm);padding-top:var(--sm);
+  border-top:1px solid var(--divider-soft);
+  font-size:15px;line-height:1.75;
+  display:none;
+}
+.tile--dark .quiz__fb{border-top-color:rgba(255,255,255,.12)}
+.quiz__fb.is-shown{display:block}
+
+/* ============================================================
+   JSON checker
+   ============================================================ */
+.checker{margin:var(--lg) 0}
+.checker__input{
+  width:100%;min-height:170px;
+  font-family:var(--mono);font-size:14px;line-height:1.8;
+  color:var(--code-plain);background:var(--code-bg);
+  border:0;border-radius:var(--r-lg);
+  padding:16px;
+  resize:vertical;
+  -webkit-appearance:none;
+}
+.checker__input:focus-visible{outline:2px solid var(--primary-focus);outline-offset:2px}
+.checker__bar{display:flex;flex-wrap:wrap;gap:var(--xs);margin-top:var(--sm);align-items:center}
+.checker__result{
+  margin-top:var(--sm);
+  border-radius:var(--r-lg);
+  padding:var(--md) var(--lg);
+  font-size:16px;line-height:1.75;
+  display:none;
+}
+.checker__result.is-shown{display:block}
+.checker__result.is-ok{background:rgba(52,199,89,.14);box-shadow:inset 0 0 0 1px rgba(52,199,89,.4)}
+.checker__result.is-ng{background:rgba(255,69,58,.12);box-shadow:inset 0 0 0 1px rgba(255,69,58,.4)}
+.checker__result h4{margin:0 0 var(--xs);font-size:17px}
+.checker__hint{font-size:14px;color:var(--ink-48);margin-top:var(--xs)}
+.tile--dark .checker__hint,.tile--dark-2 .checker__hint,.tile--dark-3 .checker__hint{color:var(--body-muted)}
+.chip{
+  appearance:none;border:0;cursor:pointer;
+  background:var(--pearl);color:var(--ink-80);
+  box-shadow:inset 0 0 0 1px var(--hairline);
+  border-radius:var(--r-pill);
+  min-height:36px;padding:7px 15px;
+  font-size:14px;letter-spacing:-.01em;
+  transition:transform .15s ease;
+}
+.tile--dark .chip,.tile--dark-2 .chip,.tile--dark-3 .chip{
+  background:rgba(255,255,255,.1);color:var(--on-dark);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);
+}
+.chip:active{transform:scale(.95)}
+.chip:focus-visible{outline:2px solid var(--primary-focus);outline-offset:2px}
+
+/* ============================================================
+   Cards / grid
+   ============================================================ */
+.grid{display:grid;gap:var(--sm);margin:var(--lg) 0}
+@media (min-width:640px){.grid--2{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:834px){.grid--3{grid-template-columns:repeat(3,1fr)}}
+.card{
+  background:var(--canvas);
+  border-radius:var(--r-lg);
+  box-shadow:inset 0 0 0 1px var(--hairline);
+  padding:var(--lg);
+}
+.tile--dark .card,.tile--dark-2 .card,.tile--dark-3 .card{
+  background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.card h4{margin-top:0}
+.card p:last-child{margin-bottom:0}
+
+/* table */
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:var(--lg) 0;border-radius:var(--r-lg)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:15px;background:var(--canvas)}
+.tile--dark table,.tile--dark-2 table,.tile--dark-3 table{background:transparent;color:var(--on-dark)}
+th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--hairline);vertical-align:top;line-height:1.7}
+.tile--dark th,.tile--dark td{border-bottom-color:rgba(255,255,255,.14)}
+th{font-weight:600;font-size:14px;letter-spacing:-.01em;background:var(--parchment)}
+.tile--dark th,.tile--dark-2 th,.tile--dark-3 th{background:rgba(255,255,255,.07)}
+tr:last-child td{border-bottom:0}
+td code,th code{font-family:var(--mono);font-size:13px}
+
+/* step list */
+.steps{list-style:none;counter-reset:s;margin:var(--lg) 0;padding:0}
+.steps li{
+  counter-increment:s;position:relative;
+  padding-left:44px;margin-bottom:var(--md);line-height:1.8;
+}
+.steps li::before{
+  content:counter(s);
+  position:absolute;left:0;top:2px;
+  width:28px;height:28px;border-radius:var(--r-pill);
+  background:var(--primary);color:#fff;
+  font-size:14px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ============================================================
+   Hero / footer
+   ============================================================ */
+.hero{
+  padding-top:calc(var(--nav-h) + env(safe-area-inset-top) + 56px);
+  padding-bottom:var(--xxl);
+}
+.hero__meta{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:var(--lg);
+}
+.hero__meta span{
+  font-size:13px;color:var(--ink-48);
+  background:var(--canvas);border-radius:var(--r-pill);
+  padding:6px 14px;box-shadow:inset 0 0 0 1px var(--hairline);
+}
+
+.footer{
+  background:var(--parchment);
+  padding:var(--xxl) 20px calc(var(--xl) + env(safe-area-inset-bottom));
+  color:var(--ink-80);
+}
+.footer__legal{font-size:12px;color:var(--ink-48);line-height:1.8;margin-top:var(--lg)}
+
+/* ============================================================
+   Desktop
+   ============================================================ */
+@media (min-width:735px){
+  .tile{padding:var(--section) 40px}
+  .hero{padding-top:calc(var(--nav-h) + 88px);padding-bottom:var(--section)}
+  body{font-size:17px}
+}
+@media (min-width:1069px){
+  .tile{padding:var(--section) 60px}
+}
+</style>
+</head>
+<body>
+
+<header class="global-nav">
+  <a class="global-nav__brand" href="#top">JSONがわかると、<span>AIが動き出す</span></a>
+  <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="tray">
+    <span class="nav-toggle__bars" aria-hidden="true"></span>もくじ
+  </button>
+</header>
+<div class="progress" id="progress" role="presentation"></div>
+
+<nav class="tray" id="tray" aria-label="もくじ">
+  <p class="tray__label">もくじ</p>
+  <ul class="tray__list" id="trayList"></ul>
+</nav>
+
+<main id="top">
+
+<!-- ============================================================ HERO -->
+<section class="tile tile--parchment hero">
+  <div class="wrap">
+    <p class="eyebrow">AI時代の必修科目</p>
+    <h1>JSONがわかると、<br>AIが動き出す。</h1>
+    <p class="lead">
+      ジェイソンは、人の名前じゃありません。
+      AIエージェントを使いはじめると必ず出会う、あの <span class="kbd">{ }</span> だらけの文字列のことです。
+    </p>
+    <p>
+      プログラミングの知識は要りません。この教材は、非エンジニアのあなたが
+      <strong>読める → 直せる → 書ける</strong> の順に登れるように作りました。
+      文法を網羅することより、<strong>あなたが詰まる場所を先回りして潰すこと</strong>を優先しています。
+    </p>
+    <div class="btn-row">
+      <a class="btn" href="#ch1">はじめから読む</a>
+      <a class="btn btn--ghost" href="#ch10">チートシートだけ見る</a>
+    </div>
+    <div class="hero__meta">
+      <span>所要 40分</span>
+      <span>全10章</span>
+      <span>予備知識ゼロ</span>
+      <span>スマホ対応</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 01 -->
+<section class="tile tile--light" id="ch1" data-num="01" data-title="JSONって、結局なに？">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 01</p>
+    <h2>JSONって、結局なに？</h2>
+    <p class="lead">ひとことで言うと、<strong>「記入済みの申込用紙」</strong>です。</p>
+
+    <p>
+      あなたが役所や病院で書く申込用紙を思い出してください。
+      「氏名」「年齢」「電話番号」という<strong>項目名</strong>が印刷されていて、その横の空欄に<strong>あなたの答え</strong>を書きますよね。
+    </p>
+    <p>
+      JSONは、それをコンピュータが読める形にしただけのものです。それ以上でも以下でもありません。
+    </p>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">申込用紙を、JSONにすると</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "氏名": "山田花子",
+  "年齢": 34,
+  "電話番号": "090-1234-5678"
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">↑</span>
+      <span>左側（青い文字）が<strong>項目名</strong>、右側があなたの<strong>答え</strong>。真ん中の <span class="kbd">:</span> が「＝」の役割です。これだけです。</span>
+    </p>
+
+    <h3>これは「プログラミング」ではありません</h3>
+    <p>
+      ここが一番大事なところです。JSONには、計算する機能も、条件分岐も、繰り返しもありません。
+      <strong>できるのは「情報を並べて書く」ことだけ</strong>です。
+    </p>
+    <p>
+      料理でたとえるなら、JSONは<strong>レシピの材料表</strong>であって、調理の手順書ではありません。
+      「玉ねぎ 2個、豚肉 300g」と並べるだけ。炒めたり煮たりするのは、それを受け取ったAIやアプリの仕事です。
+    </p>
+
+    <div class="callout">
+      <p class="callout__title">JSON = JavaScript Object Notation</p>
+      <p style="margin:0">
+        名前に「JavaScript」と入っていますが、<strong>JavaScriptを知らなくても関係ありません</strong>。
+        生まれた場所がそこだったというだけで、今では言語もツールも問わず、世界中で使われる共通フォーマットです。
+        読み方は「ジェイソン」。
+      </p>
+    </div>
+
+    <h3>なぜ、あなたがこれを学ぶ必要があるのか</h3>
+    <p>
+      AIエージェントを使いはじめると、次のような場面で必ずJSONと出会います。
+    </p>
+
+    <div class="grid grid--2">
+      <div class="card">
+        <h4>AIツールの設定ファイル</h4>
+        <p>Claude Code や各種AIツールに「どのサービスと繋ぐか」を教えるファイルが、たいていJSONです。</p>
+      </div>
+      <div class="card">
+        <h4>MCPの接続設定</h4>
+        <p>AIにGmailやカレンダーを繋ぐとき、公式サイトからコピペするあの設定がJSONです。</p>
+      </div>
+      <div class="card">
+        <h4>AIへの出力指示</h4>
+        <p>「この形式で答えて」とAIに渡す型。指定できると、AIの返事が一気に安定します。</p>
+      </div>
+      <div class="card">
+        <h4>APIからの返事</h4>
+        <p>外部サービスがデータを返してくるときの、標準的な包み紙です。</p>
+      </div>
+    </div>
+
+    <p>
+      つまり、<strong>JSONが読めない＝AIツールの設定でつまずき続ける</strong>ということ。
+      逆に言えば、この教材を読み終えたあなたは、公式ドキュメントのコピペで詰まらなくなります。
+    </p>
+
+    <div class="quiz">
+      <p class="quiz__q">Q. JSONにできないことは、次のうちどれ？</p>
+      <div class="quiz__opts">
+        <button class="quiz__opt" type="button">情報に名前をつけて並べる</button>
+        <button class="quiz__opt" type="button">日本語を書く</button>
+        <button class="quiz__opt" type="button" data-correct="true">合計金額を計算する</button>
+      </div>
+      <div class="quiz__fb">
+        <strong>正解：合計金額を計算する</strong><br>
+        JSONは情報を書き並べるだけの入れ物です。計算はできません。日本語もふつうに書けます。
+      </div>
+    </div>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">!</span>ここだけ覚えて</p>
+      <ul>
+        <li>JSONは「記入済みの申込用紙」。項目名と答えのペアを並べたもの</li>
+        <li>プログラミングではない。計算も判断もしない</li>
+        <li>AIツールの設定でほぼ必ず出会う</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 02 -->
+<section class="tile tile--dark" id="ch2" data-num="02" data-title="いちばん小さいJSONを読む">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 02</p>
+    <h2>いちばん小さいJSONを読む</h2>
+    <p class="lead">部品はたった4つ。波かっこ、キー、値、そしてコロンとカンマ。</p>
+
+    <p>
+      いきなり長い設定ファイルを見ると圧倒されますが、どんなに巨大なJSONも、この4つの部品の繰り返しでできています。
+      分解して、ひとつずつ見ていきましょう。
+    </p>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">最小のJSON</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "name": "Claude"
+}</code></pre>
+    </div>
+
+    <h3>部品①　波かっこ <span class="kbd">{ }</span> — 用紙そのもの</h3>
+    <p>
+      一番外側の <span class="kbd">{</span> と <span class="kbd">}</span> は、<strong>「ここからここまでが1枚の用紙です」</strong>という囲いです。
+      始まりと終わりが必ずペアになります。開いたら、必ず閉じる。
+    </p>
+
+    <h3>部品②　キー — 項目名</h3>
+    <p>
+      <span class="kbd">"name"</span> の部分。用紙に印刷されている「氏名」にあたります。
+      <strong>キーは必ずダブルクォート <span class="kbd">"</span> で囲みます</strong>。ここは例外なし、絶対のルールです。
+    </p>
+
+    <h3>部品③　値 — あなたの答え</h3>
+    <p>
+      <span class="kbd">"Claude"</span> の部分。空欄に書き込む中身です。
+      値には6つの種類があって、それは次の章でやります。
+    </p>
+
+    <h3>部品④　コロン <span class="kbd">:</span> とカンマ <span class="kbd">,</span></h3>
+    <p>
+      <strong>コロンは「＝」</strong>。キーと値をつなぎます。<br>
+      <strong>カンマは「次の項目があります」の合図</strong>。項目と項目の<em>あいだ</em>に置きます。
+    </p>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">項目が増えたら、あいだにカンマ</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "name": "Claude",
+  "model": "opus",
+  "enabled": true
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">注</span>
+      <span>最後の <span class="kbd">"enabled": true</span> の後ろに<strong>カンマがない</strong>ことに注目。「次はもうありません」という意味です。ここは間違えやすいので、第6章でもう一度やります。</span>
+    </p>
+
+    <div class="callout">
+      <p class="callout__title">読むときのコツ：インデント（字下げ）を見る</p>
+      <p style="margin:0">
+        JSONの行頭のスペースは、コンピュータにとっては<strong>意味がありません</strong>。人間が読みやすいように下げているだけです。
+        でも逆に言えば、<strong>字下げの深さ＝入れ子の深さ</strong>。同じ深さの行は仲間、と覚えると長いファイルが一気に読めるようになります。
+      </p>
+    </div>
+
+    <details class="dig">
+      <summary><span class="dig__tag">深掘り</span>キーの名前は自由に決めていいの？<span class="dig__chev" aria-hidden="true"></span></summary>
+      <div class="dig__body">
+        <p>
+          JSONの<strong>仕様としては</strong>、ダブルクォートで囲まれていれば何でもOKです。日本語も、記号も、スペース入りも通ります。
+        </p>
+        <p>
+          ただし<strong>実務では自由ではありません</strong>。設定ファイルのキー名は、そのツールが決めた名前をそのまま使う必要があります。
+          <span class="kbd">"mcpServers"</span> と書くべきところを <span class="kbd">"mcpservers"</span> と書くと動きません。
+          <strong>大文字・小文字も区別されます。</strong>
+        </p>
+        <p style="margin-bottom:0">
+          つまり、設定ファイルを書くときの正解は「公式ドキュメントから<strong>コピペする</strong>」。自分で打つと必ずtypoします。
+        </p>
+      </div>
+    </details>
+
+    <div class="quiz">
+      <p class="quiz__q">Q. 次のうち、JSONとして正しいのはどれ？</p>
+      <div class="quiz__opts">
+        <button class="quiz__opt" type="button">{ name: "Claude" }</button>
+        <button class="quiz__opt" type="button" data-correct="true">{ "name": "Claude" }</button>
+        <button class="quiz__opt" type="button">{ 'name': 'Claude' }</button>
+      </div>
+      <div class="quiz__fb">
+        <strong>正解：{ "name": "Claude" }</strong><br>
+        キーは必ずダブルクォートで囲みます。1つ目はクォートなし、3つ目はシングルクォート（<span class="kbd">'</span>）なので、どちらもエラーになります。
+      </div>
+    </div>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">!</span>ここだけ覚えて</p>
+      <ul>
+        <li><span class="kbd">{ }</span> は用紙の囲い。開いたら必ず閉じる</li>
+        <li>キーは<strong>必ず</strong>ダブルクォートで囲む</li>
+        <li><span class="kbd">:</span> は「＝」、<span class="kbd">,</span> は「次があります」の合図</li>
+        <li>最後の項目の後ろにカンマは付けない</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 03 -->
+<section class="tile tile--light" id="ch3" data-num="03" data-title="値に書けるのは6種類だけ">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 03</p>
+    <h2>値に書けるのは、6種類だけ</h2>
+    <p class="lead">覚えることは、この表がすべてです。7つ目はありません。</p>
+
+    <p>
+      「＝」の右側、つまり<strong>答えの欄</strong>に書けるものは6種類に限られています。
+      多いように見えますが、実際によく使うのは上から4つです。
+    </p>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th style="width:22%">種類</th><th style="width:30%">書き方</th><th>どんなとき</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>文字列</strong></td>
+            <td><code>"こんにちは"</code></td>
+            <td>名前、URL、パス、メッセージ。<strong>迷ったらこれ</strong></td>
+          </tr>
+          <tr>
+            <td><strong>数値</strong></td>
+            <td><code>34</code> / <code>-1.5</code></td>
+            <td>個数、金額、温度。計算に使う数</td>
+          </tr>
+          <tr>
+            <td><strong>真偽値</strong></td>
+            <td><code>true</code> / <code>false</code></td>
+            <td>オン／オフ。「有効にする？」への答え</td>
+          </tr>
+          <tr>
+            <td><strong>null</strong></td>
+            <td><code>null</code></td>
+            <td>「値なし」。空欄のまま提出、の意味</td>
+          </tr>
+          <tr>
+            <td><strong>配列</strong></td>
+            <td><code>["A", "B"]</code></td>
+            <td>複数を並べる。買い物リスト（第4章）</td>
+          </tr>
+          <tr>
+            <td><strong>オブジェクト</strong></td>
+            <td><code>{ "k": "v" }</code></td>
+            <td>用紙の中の用紙。入れ子（第5章）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>いちばん大事な区別：クォートが付くか、付かないか</h3>
+    <p>
+      非エンジニアがつまずくポイントの第1位がここです。ルールはシンプルで、
+      <strong>文字列だけがクォートで囲まれ、それ以外は裸で書きます。</strong>
+    </p>
+
+    <div class="code code--good">
+      <div class="code__head">
+        <span class="code__name">正しい書き分け</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "userName": "花子",
+  "age": 34,
+  "isActive": true,
+  "nickname": null
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">↑</span>
+      <span>「花子」だけがクォート付き。<span class="kbd">34</span>・<span class="kbd">true</span>・<span class="kbd">null</span> は裸です。</span>
+    </p>
+
+    <div class="code code--bad">
+      <div class="code__head">
+        <span class="code__name">意味が変わってしまう例</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "age": ⟦"34"⟧,
+  "isActive": ⟦"true"⟧
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">⚠</span>
+      <span>
+        これは<strong>エラーにはなりません</strong>。JSONとしては正しい。でも意味が変わります。
+        <span class="kbd">"34"</span> は「数の34」ではなく「3と4という文字」、<span class="kbd">"true"</span> は「オン」ではなく「trueという4文字」。
+        受け取ったツールが「数値を期待していたのに文字が来た」と怒る、<strong>気づきにくいタイプの不具合</strong>です。
+      </span>
+    </p>
+
+    <h3>true / false / null は、小文字で裸のまま</h3>
+    <p>
+      この3つは<strong>すべて小文字</strong>で書きます。<span class="kbd">True</span>（先頭大文字）や <span class="kbd">TRUE</span>（全部大文字）はエラーです。
+      Excelや他の言語に慣れている人ほど間違えるので、意識して小文字にしてください。
+    </p>
+
+    <div class="callout">
+      <p class="callout__title">「null」と「空文字」と「項目がない」は、全部ちがう</p>
+      <p style="margin:0">
+        <span class="kbd">"nickname": null</span> ＝ 項目はあるが、値は無いと明示<br>
+        <span class="kbd">"nickname": ""</span> ＝ 項目があり、値は「空っぽの文字列」<br>
+        項目ごと書かない ＝ そもそも質問されていない<br><br>
+        受け取る側のツールは、この3つを別物として扱います。<strong>公式ドキュメントに書かれている通りに</strong>合わせるのが安全です。
+      </p>
+    </div>
+
+    <details class="dig">
+      <summary><span class="dig__tag">深掘り</span>文字列の中でクォートや改行を使いたいときは<span class="dig__chev" aria-hidden="true"></span></summary>
+      <div class="dig__body">
+        <p>
+          文字列はダブルクォートで囲むので、<strong>中にダブルクォートを入れたい</strong>ときに困ります。
+          そのときは直前にバックスラッシュ <span class="kbd">\</span> を置いて「これは囲いじゃなく文字です」と伝えます。これを<strong>エスケープ</strong>と呼びます。
+        </p>
+        <div class="code">
+          <div class="code__head">
+            <span class="code__name">エスケープの例</span>
+            <button class="copy" type="button">コピー</button>
+          </div>
+          <pre data-lang="json"><code>{
+  "quote": "彼は\"すごい\"と言った",
+  "path": "C:\\Users\\hanako",
+  "memo": "1行目\n2行目"
+}</code></pre>
+        </div>
+        <p style="margin-bottom:0">
+          よく使うのは3つだけ。<span class="kbd">\"</span>＝ダブルクォート、<span class="kbd">\\</span>＝バックスラッシュ本体、<span class="kbd">\n</span>＝改行。<br>
+          特にWindowsのファイルパスは <span class="kbd">\</span> を<strong>2つ重ねる</strong>必要があるので、設定ファイルでよく事故ります。
+        </p>
+      </div>
+    </details>
+
+    <div class="quiz">
+      <p class="quiz__q">Q. 「通知をオフにする」設定として正しいのは？</p>
+      <div class="quiz__opts">
+        <button class="quiz__opt" type="button">"notify": "false"</button>
+        <button class="quiz__opt" type="button">"notify": False</button>
+        <button class="quiz__opt" type="button" data-correct="true">"notify": false</button>
+      </div>
+      <div class="quiz__fb">
+        <strong>正解："notify": false</strong><br>
+        真偽値は<strong>小文字・クォートなし</strong>。1つ目はエラーにはなりませんが「falseという文字列」として扱われ、意図通り動かないことがあります。2つ目は大文字始まりなのでエラーです。
+      </div>
+    </div>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">!</span>ここだけ覚えて</p>
+      <ul>
+        <li>値は6種類：文字列・数値・真偽値・null・配列・オブジェクト</li>
+        <li><strong>クォートが付くのは文字列だけ</strong>。数値・true/false・null は裸</li>
+        <li>true / false / null は<strong>すべて小文字</strong></li>
+        <li><span class="kbd">"34"</span> と <span class="kbd">34</span> は別物。エラーは出ないが意味が変わる</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 04 -->
+<section class="tile tile--parchment" id="ch4" data-num="04" data-title="{ } と [ ] の使い分け">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 04</p>
+    <h2>{ } と [ ] の使い分け</h2>
+    <p class="lead">カルテか、買い物リストか。この2つを見分けられれば、JSONは半分読めたも同然です。</p>
+
+    <p>
+      JSONに出てくるかっこは2種類。見た目は似ていますが、役割はまったく違います。
+      <strong>ここを混同するのが、つまずきポイントの第2位</strong>です。
+    </p>
+
+    <div class="grid grid--2">
+      <div class="card">
+        <h4>{ } 波かっこ ＝ カルテ</h4>
+        <p><strong>項目名で引く</strong>もの。<br>「氏名は？」「年齢は？」と<strong>名前を指定して</strong>中身を取り出します。順番に意味はありません。</p>
+      </div>
+      <div class="card">
+        <h4>[ ] 角かっこ ＝ 買い物リスト</h4>
+        <p><strong>番号で引く</strong>もの。<br>ただ並んでいるだけで、名前は付いていません。<strong>順番に意味があります</strong>。</p>
+      </div>
+    </div>
+
+    <h3>見分け方は「中にキーがあるか」だけ</h3>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">{ } の中は「キー: 値」のペア</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "name": "山田花子",
+  "age": 34
+}</code></pre>
+    </div>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">[ ] の中は値だけがカンマ区切りで並ぶ</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>["りんご", "みかん", "ぶどう"]</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">↑</span>
+      <span>キーがありません。「りんご」に名前は付いておらず、ただ<strong>1番目</strong>にあるだけです。</span>
+    </p>
+
+    <h3>実際には、この2つを組み合わせて使います</h3>
+    <p>
+      現実の設定ファイルでいちばん多いのが、<strong>「カルテを何枚も束ねたリスト」</strong>という形です。
+      社員名簿を想像してください。1人ぶんの情報がカルテ（<span class="kbd">{ }</span>）で、それが人数ぶん並ぶ（<span class="kbd">[ ]</span>）。
+    </p>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">members.json — いちばんよく見る形</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "members": [
+    { "name": "山田花子", "role": "編集" },
+    { "name": "佐藤太郎", "role": "デザイン" }
+  ]
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">↑</span>
+      <span>
+        外側は用紙（<span class="kbd">{</span>）、<span class="kbd">"members"</span> の答えがリスト（<span class="kbd">[</span>）、リストの中身が1人ぶんのカルテ（<span class="kbd">{</span>）。
+        <strong>字下げの深さを見れば、どこが何なのかが見えてきます。</strong>
+      </span>
+    </p>
+
+    <div class="callout">
+      <p class="callout__title">閉じかっこが並ぶ理由</p>
+      <p style="margin:0">
+        長いJSONの末尾で <span class="kbd">} ] }</span> のように閉じかっこが連続して不安になりますが、これは<strong>開いた順の逆に閉じているだけ</strong>です。
+        カルテを閉じて、リストを閉じて、いちばん外の用紙を閉じる。心配なら、開きかっこと閉じかっこを上下で見比べて、<strong>字下げの位置が揃っているか</strong>を確認してください。揃っていれば正しく閉じられています。
+      </p>
+    </div>
+
+    <details class="dig">
+      <summary><span class="dig__tag">深掘り</span>空っぽのときはどう書く？<span class="dig__chev" aria-hidden="true"></span></summary>
+      <div class="dig__body">
+        <p>
+          中身がなくても、かっこは書きます。
+          <span class="kbd">[]</span> は「リストはあるが空」、<span class="kbd">{}</span> は「用紙はあるが記入なし」。
+          設定ファイルで <span class="kbd">"mcpServers": {}</span> と書いてあったら、「接続先を入れる場所は用意したが、まだ何も入れていない」という意味です。
+        </p>
+        <p style="margin-bottom:0">
+          ここを <span class="kbd">null</span> や空欄にすると、ツールによっては動かなくなります。<strong>空でも、かっこは残す。</strong>
+        </p>
+      </div>
+    </details>
+
+    <div class="quiz">
+      <p class="quiz__q">Q. 「好きな色を3つ挙げる」項目に使うべきなのは？</p>
+      <div class="quiz__opts">
+        <button class="quiz__opt" type="button" data-correct="true">[ ] 角かっこ</button>
+        <button class="quiz__opt" type="button">{ } 波かっこ</button>
+      </div>
+      <div class="quiz__fb">
+        <strong>正解：[ ] 角かっこ</strong><br>
+        同じ種類のものが複数並ぶときはリスト。<span class="kbd">"colors": ["赤", "青", "緑"]</span> と書きます。
+      </div>
+    </div>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">!</span>ここだけ覚えて</p>
+      <ul>
+        <li><span class="kbd">{ }</span> ＝ カルテ。名前で引く。中は「キー: 値」</li>
+        <li><span class="kbd">[ ]</span> ＝ リスト。順番に並ぶ。中は値だけ</li>
+        <li>実務でいちばん多いのは「カルテを束ねたリスト」</li>
+        <li>中身が空でも、かっこは書く（<span class="kbd">[]</span> / <span class="kbd">{}</span>）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 05 -->
+<section class="tile tile--dark-2" id="ch5" data-num="05" data-title="入れ子 — 箱の中の箱">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 05</p>
+    <h2>入れ子 — 箱の中の箱</h2>
+    <p class="lead">長いJSONが読めない理由は、難しいからではなく、<strong>入れ子が深いから</strong>です。</p>
+
+    <p>
+      申込用紙の「住所」欄が、実は「郵便番号・都道府県・市区町村」の小さな用紙になっていることがありますよね。
+      JSONでも同じことができます。<strong>値の場所に、もう一枚の用紙を丸ごと入れる</strong>。これが入れ子です。
+    </p>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">住所を入れ子にする</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "name": "山田花子",
+  "address": {
+    "zip": "150-0001",
+    "pref": "東京都",
+    "city": "渋谷区"
+  }
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">↑</span>
+      <span><span class="kbd">"address"</span> の答えが、文字列ではなく<strong>用紙まるごと</strong>になっています。これだけのことです。</span>
+    </p>
+
+    <h3>深い入れ子を読むコツは、たった1つ</h3>
+    <p>
+      <strong>字下げの位置が同じ行だけを、縦に拾って読む。</strong>
+      これで、何十行あっても構造がつかめます。
+    </p>
+    <p>
+      上の例なら、いちばん浅い階層は <span class="kbd">"name"</span> と <span class="kbd">"address"</span> の2つだけ。
+      つまり「この用紙の項目は2つ」とわかります。<span class="kbd">zip</span> や <span class="kbd">pref</span> は、address の中の話なので<strong>いったん無視していい</strong>のです。
+    </p>
+
+    <div class="callout">
+      <p class="callout__title">読み方の手順</p>
+      <ol class="steps" style="margin:var(--sm) 0 0">
+        <li>いちばん外側の <span class="kbd">{</span> を見つける</li>
+        <li>その1段だけ内側にあるキーを、上から拾う（これが「大項目」）</li>
+        <li>関係ある大項目を1つ選び、その中だけを同じやり方で読む</li>
+      </ol>
+    </div>
+
+    <h3>実物を読んでみる</h3>
+    <p>
+      AIツールの設定ファイルは、たいていこの形です。怖がらずに、上の手順で分解してみてください。
+    </p>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">よくあるAIツールの設定ファイル</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "theme": "dark",
+  "editor": {
+    "fontSize": 14,
+    "wordWrap": true
+  },
+  "shortcuts": [
+    { "key": "cmd+k", "action": "search" },
+    { "key": "cmd+s", "action": "save" }
+  ]
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">↑</span>
+      <span>
+        大項目は <strong>theme / editor / shortcuts の3つだけ</strong>。
+        theme は文字列、editor は用紙、shortcuts はカルテのリスト。
+        <strong>17行が、3行の話に縮みました。</strong>
+      </span>
+    </p>
+
+    <details class="dig">
+      <summary><span class="dig__tag">深掘り</span>「エディタの文字サイズ」の場所を人に伝えるには<span class="dig__chev" aria-hidden="true"></span></summary>
+      <div class="dig__body">
+        <p>
+          上の例で <span class="kbd">14</span> という値の場所を説明したいとき、こう書きます。
+        </p>
+        <div class="code">
+          <div class="code__head">
+            <span class="code__name">パス表記</span>
+            <button class="copy" type="button">コピー</button>
+          </div>
+          <pre><code>editor.fontSize</code></pre>
+        </div>
+        <p>
+          外側から内側へ、キーを <span class="kbd">.</span> でつないだもの。これを<strong>パス</strong>と呼びます。
+          リストの中を指すときは番号を使い、<span class="kbd">shortcuts[0].key</span> のように書きます。
+          <strong>番号は0から始まる</strong>ので、1番目が <span class="kbd">[0]</span>、2番目が <span class="kbd">[1]</span> です。
+        </p>
+        <p style="margin-bottom:0">
+          公式ドキュメントやエラーメッセージにこの表記が出てきたら、「外側からたどれ」という道案内だと思ってください。
+        </p>
+      </div>
+    </details>
+
+    <div class="quiz">
+      <p class="quiz__q">Q. 上の設定ファイルの「大項目」はいくつ？</p>
+      <div class="quiz__opts">
+        <button class="quiz__opt" type="button" data-correct="true">3つ</button>
+        <button class="quiz__opt" type="button">5つ</button>
+        <button class="quiz__opt" type="button">7つ</button>
+      </div>
+      <div class="quiz__fb">
+        <strong>正解：3つ</strong><br>
+        theme / editor / shortcuts。内側の fontSize などは、大項目の中の話なので数えません。
+      </div>
+    </div>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">!</span>ここだけ覚えて</p>
+      <ul>
+        <li>値の場所には、用紙（<span class="kbd">{ }</span>）やリスト（<span class="kbd">[ ]</span>）を丸ごと入れられる</li>
+        <li>読むときは<strong>同じ字下げの行だけを縦に拾う</strong></li>
+        <li>内側は後回しでいい。まず大項目の数を数える</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 06 -->
+<section class="tile tile--light" id="ch6" data-num="06" data-title="エラーの9割は、この7つ">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 06</p>
+    <h2>エラーの9割は、この7つ</h2>
+    <p class="lead">ここが本書の核心です。JSONで詰まる原因は、ほぼこの7パターンに集約されます。</p>
+
+    <p>
+      JSONは融通がききません。<strong>たった1文字違うだけで、丸ごと読めなくなります。</strong>
+      裏を返せば、原因のパターンは決まっているということ。順番に潰していきましょう。
+    </p>
+
+    <h3><span class="muted">やらかし 1／7</span><br>最後の項目にカンマを付けてしまう</h3>
+    <p>
+      <strong>圧倒的第1位。</strong>項目を1つ消したときに、カンマだけ残るのが典型的なパターンです。
+    </p>
+    <div class="code code--bad">
+      <div class="code__head">
+        <span class="code__name">エラーになる</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "name": "Claude",
+  "model": "opus"⟦,⟧
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">✕</span>
+      <span>カンマは「次があります」の合図。次が無いのに付けると、JSONは「約束が違う」と怒ります。<strong>閉じかっこの直前にカンマがあったら、それは間違い。</strong></span>
+    </p>
+
+    <h3><span class="muted">やらかし 2／7</span><br>項目のあいだのカンマを忘れる</h3>
+    <p>1つ目の逆です。項目を足したときに起こります。</p>
+    <div class="code code--bad">
+      <div class="code__head">
+        <span class="code__name">エラーになる</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "name": "Claude"⟦ ⟧
+  "model": "opus"
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">✕</span>
+      <span><span class="kbd">"Claude"</span> の後ろにカンマが必要です。<strong>「最後の行以外は、すべてカンマで終わる」</strong>と覚えると両方いっぺんに防げます。</span>
+    </p>
+
+    <h3><span class="muted">やらかし 3／7</span><br>シングルクォートを使う</h3>
+    <div class="code code--bad">
+      <div class="code__head">
+        <span class="code__name">エラーになる</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  ⟦'name'⟧: ⟦'Claude'⟧
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">✕</span>
+      <span>JSONで使えるのは<strong>ダブルクォート <span class="kbd">"</span> だけ</strong>です。他のプログラミング言語ではシングルでも通るため、ネットで拾ったコードをそのまま貼ると起きがちです。</span>
+    </p>
+
+    <h3><span class="muted">やらかし 4／7</span><br>コメントを書いてしまう</h3>
+    <div class="code code--bad">
+      <div class="code__head">
+        <span class="code__name">エラーになる</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  ⟦// 使うモデル⟧
+  "model": "opus"
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">✕</span>
+      <span>
+        <strong>JSONにコメント機能はありません。</strong><span class="kbd">//</span> も <span class="kbd">/* */</span> も <span class="kbd">#</span> も、すべてエラーです。
+        メモを残したいときは、下のように<strong>ふつうの項目として</strong>書いてしまうのが定番の回避策です。
+      </span>
+    </p>
+    <div class="code code--good">
+      <div class="code__head">
+        <span class="code__name">メモを残したいときの定番</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "_memo": "opusは高性能だが応答が遅い",
+  "model": "opus"
+}</code></pre>
+    </div>
+
+    <h3><span class="muted">やらかし 5／7</span><br>全角の記号が混ざる</h3>
+    <p>
+      <strong>日本語環境で最も厄介な罠</strong>です。見た目がほとんど同じなのに、コンピュータには別物です。
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:30%">正しい（半角）</th><th style="width:30%">間違い（全角）</th><th>備考</th></tr></thead>
+        <tbody>
+          <tr><td><code>"</code></td><td><code>”</code> <code>“</code></td><td>Wordやメモアプリが勝手に変換する</td></tr>
+          <tr><td><code>,</code></td><td><code>，</code> <code>、</code></td><td>日本語入力のまま打つと起きる</td></tr>
+          <tr><td><code>:</code></td><td><code>：</code></td><td>同上</td></tr>
+          <tr><td><code>{ }</code></td><td><code>｛ ｝</code></td><td>同上</td></tr>
+          <tr><td>（半角スペース）</td><td>（全角スペース）</td><td><strong>目で見て気づけない</strong>。最凶</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <p class="callout__title">対策：JSONは「日本語入力オフ」で打つ</p>
+      <p style="margin:0">
+        値として日本語を書くときだけ入力をオンにする。これだけで全角混入はほぼ防げます。
+        <strong>そもそもWordやメモ帳ではなく、テキストエディタで編集してください。</strong>
+        Wordはダブルクォートを勝手に <span class="kbd">”</span> に変えてしまいます。
+      </p>
+    </div>
+
+    <h3><span class="muted">やらかし 6／7</span><br>かっこの数が合わない</h3>
+    <p>
+      コピペで一部だけ持ってきたときや、項目を消したときに起きます。
+      エラーメッセージが「ファイルの末尾」を指すことが多く、<strong>本当の原因はもっと手前</strong>にあるのが厄介な点です。
+    </p>
+    <p>
+      対処法はシンプルで、<strong>字下げを揃え直すこと</strong>。揃えてみて形が崩れる場所が、かっこの過不足がある場所です。
+    </p>
+
+    <h3><span class="muted">やらかし 7／7</span><br>ファイルの外に文字を書く</h3>
+    <div class="code code--bad">
+      <div class="code__head">
+        <span class="code__name">エラーになる</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>⟦以下が設定です⟧
+{
+  "model": "opus"
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">✕</span>
+      <span>
+        JSONファイルの中身は、<strong>いちばん外側の <span class="kbd">{</span> で始まり、対応する <span class="kbd">}</span> で終わる</strong>のが原則。その外に説明文があってはいけません。
+        AIに「JSONを出して」と頼んだときの返事をコピペする際、前後の説明文まで一緒に貼ってしまう事故が非常に多いです。
+      </span>
+    </p>
+
+    <div class="quiz">
+      <p class="quiz__q">Q. 設定ファイルから項目を1つ消したらエラーになった。まず疑うべきは？</p>
+      <div class="quiz__opts">
+        <button class="quiz__opt" type="button" data-correct="true">カンマが余っている／足りない</button>
+        <button class="quiz__opt" type="button">ファイル名が間違っている</button>
+        <button class="quiz__opt" type="button">値の種類が違う</button>
+      </div>
+      <div class="quiz__fb">
+        <strong>正解：カンマが余っている／足りない</strong><br>
+        項目を消すと、その行のカンマだけが残るか、直前の行のカンマが不要になります。<strong>削除したあたりのカンマ</strong>を必ず確認してください。
+      </div>
+    </div>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">!</span>ここだけ覚えて</p>
+      <ul>
+        <li><strong>最後の行以外は、すべてカンマで終わる</strong>（1位・2位を同時に防げる）</li>
+        <li>クォートはダブル <span class="kbd">"</span> のみ。コメントは書けない</li>
+        <li>全角の <span class="kbd">”</span> <span class="kbd">，</span> <span class="kbd">：</span> と全角スペースに注意。日本語入力はオフで打つ</li>
+        <li>JSONの外に説明文を置かない</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 07 -->
+<section class="tile tile--parchment" id="ch7" data-num="07" data-title="エラーメッセージの読み方">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 07</p>
+    <h2>エラーメッセージの読み方</h2>
+    <p class="lead">英語で赤い文字が出ても、見る場所は<strong>2つだけ</strong>です。</p>
+
+    <p>
+      JSONのエラーメッセージは英語で、しかも素っ気ない。でも安心してください。
+      <strong>読むべきは「どこで」と「何を期待していたか」の2点だけ</strong>で、あとは飾りです。
+    </p>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">典型的なエラーメッセージ</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre><code>Expected ',' or '}' after property value
+in JSON at position 42 (line 3 column 18)</code></pre>
+    </div>
+
+    <div class="grid grid--2">
+      <div class="card">
+        <h4>① どこで — line / column</h4>
+        <p><strong>line 3 column 18</strong> ＝ 3行目の18文字目。<br>エディタの行番号を見て、その付近を確認します。</p>
+      </div>
+      <div class="card">
+        <h4>② 何を期待していたか — Expected</h4>
+        <p><strong>Expected ',' or '}'</strong> ＝ 「カンマか閉じかっこが来るはずだった」。<br>つまり<strong>カンマ忘れ</strong>です。</p>
+      </div>
+    </div>
+
+    <h3>よく出るメッセージの日本語訳</h3>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:44%">英語</th><th>意味と、まず疑うこと</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>Expected ',' or '}'</code></td>
+            <td>項目のあいだの<strong>カンマ忘れ</strong>（やらかし2）</td>
+          </tr>
+          <tr>
+            <td><code>Expected double-quoted property name</code></td>
+            <td>キーが期待された場所に無い。<strong>末尾の余分なカンマ</strong>か、キーのクォート忘れ（やらかし1・3）</td>
+          </tr>
+          <tr>
+            <td><code>Unexpected token</code></td>
+            <td>そこにあってはいけない文字がある。<strong>全角記号・コメント・シングルクォート</strong>（やらかし3・4・5）</td>
+          </tr>
+          <tr>
+            <td><code>Unexpected end of JSON input</code></td>
+            <td>途中で終わっている。<strong>閉じかっこが足りない</strong>（やらかし6）</td>
+          </tr>
+          <tr>
+            <td><code>Unexpected non-whitespace character after JSON</code></td>
+            <td>JSONの<strong>外側に余計な文字</strong>がある（やらかし7）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p class="callout__title">大原則：エラー位置の「少し手前」を見る</p>
+      <p style="margin:0">
+        JSONは上から順に読まれ、<strong>「おかしい」と気づいた場所</strong>でエラーを出します。
+        でも本当の原因は、たいてい<strong>その1〜2行前</strong>にあります。カンマ忘れなら、忘れたのは前の行だからです。
+        指された行だけを睨まず、<strong>手前の行から見直してください。</strong>
+      </p>
+    </div>
+
+    <details class="dig">
+      <summary><span class="dig__tag">深掘り</span>AIにエラーを丸投げするときの頼み方<span class="dig__chev" aria-hidden="true"></span></summary>
+      <div class="dig__body">
+        <p>
+          自分で直すのが早いですが、詰まったらAIに聞くのが確実です。そのとき<strong>この3点をセットで渡す</strong>と、一発で直ります。
+        </p>
+        <ol class="steps" style="margin:var(--sm) 0">
+          <li>JSONの全文（一部だけ切り取らない。原因が切り取った外にあることが多い）</li>
+          <li>エラーメッセージの全文</li>
+          <li>「<strong>修正後のJSONだけを、説明なしで出力して</strong>」という指示</li>
+        </ol>
+        <p style="margin-bottom:0">
+          3つ目が重要です。これを言わないと説明文が付いてきて、そのままコピペして<strong>やらかし7</strong>を踏みます。
+        </p>
+      </div>
+    </details>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">!</span>ここだけ覚えて</p>
+      <ul>
+        <li>見るのは <strong>line / column</strong> と <strong>Expected の後ろ</strong>だけ</li>
+        <li>原因は指された場所の<strong>1〜2行手前</strong>にあることが多い</li>
+        <li>AIに聞くときは「全文＋エラー全文＋説明なしで出力して」</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 08 -->
+<section class="tile tile--dark-3" id="ch8" data-num="08" data-title="実物を読んでみる">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 08</p>
+    <h2>実物を読んでみる</h2>
+    <p class="lead">ここまでの知識で、AIツールの設定ファイルはもう読めます。試してみましょう。</p>
+
+    <p>
+      AIエージェントに外部サービスを繋ぐとき、公式サイトからJSONをコピペする場面があります。
+      その典型例が、次のような形です。<strong>一見こわいですが、分解すれば第5章でやったことと同じ</strong>です。
+    </p>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">AIエージェントの接続設定（典型例）</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/hanako/Documents"]
+    }
+  }
+}</code></pre>
+    </div>
+
+    <h3>手順どおりに分解する</h3>
+    <ol class="steps">
+      <li>いちばん外の <span class="kbd">{</span> がある。これが用紙全体。</li>
+      <li>1段内側のキーは <span class="kbd">"mcpServers"</span> <strong>ひとつだけ</strong>。つまりこの用紙の項目は1つ。</li>
+      <li>その中を見ると、キーは <span class="kbd">"filesystem"</span> ひとつ。これは<strong>あなたが好きに付けた接続の名前</strong>です。</li>
+      <li>さらに中に <span class="kbd">"command"</span> と <span class="kbd">"args"</span> の2つ。これが実際の設定です。</li>
+    </ol>
+
+    <p>
+      <span class="kbd">"command"</span> は「何のプログラムを起動するか」、
+      <span class="kbd">"args"</span> は「そのプログラムに渡す言葉のリスト」。
+      <strong>args が <span class="kbd">[ ]</span> なのは、渡す言葉が複数あり、しかも順番に意味があるから</strong>です（第4章）。
+    </p>
+
+    <div class="callout">
+      <p class="callout__title">あなたが書き換えていい場所は、どこ？</p>
+      <p style="margin:0">
+        <span class="kbd">"filesystem"</span> のような<strong>自分で付けた名前</strong>と、
+        <span class="kbd">"/Users/hanako/Documents"</span> のような<strong>自分の環境の値</strong>だけです。<br>
+        <span class="kbd">"mcpServers"</span> <span class="kbd">"command"</span> <span class="kbd">"args"</span> は<strong>ツールが決めた名前</strong>なので、1文字も変えてはいけません。
+      </p>
+    </div>
+
+    <h3>接続を2つに増やすとどうなるか</h3>
+    <p>「カルテを増やす」だけです。<strong>そして、あいだにカンマが要ります。</strong></p>
+
+    <div class="code code--good">
+      <div class="code__head">
+        <span class="code__name">2つめを追加した状態</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/hanako/Documents"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"]
+    }
+  }
+}</code></pre>
+    </div>
+    <p class="code-note">
+      <span class="code-note__mark">↑</span>
+      <span>
+        1つめの <span class="kbd">}</span> の後ろに<strong>カンマが付いた</strong>のがポイント。「次があります」の合図です。
+        逆に、あとで github を消すときは<strong>このカンマも一緒に消す</strong>のを忘れないでください（やらかし1）。
+      </span>
+    </p>
+
+    <details class="dig">
+      <summary><span class="dig__tag">深掘り</span>Windowsのパスを書くときの落とし穴<span class="dig__chev" aria-hidden="true"></span></summary>
+      <div class="dig__body">
+        <p>
+          Windowsのフォルダパスをそのまま貼ると、ほぼ確実に壊れます。
+          <span class="kbd">\</span> がエスケープ記号として解釈されてしまうためです（第3章の深掘り）。
+        </p>
+        <div class="code code--bad">
+          <div class="code__head"><span class="code__name">壊れる</span><button class="copy" type="button">コピー</button></div>
+          <pre data-lang="json"><code>{ "path": "C:⟦\⟧Users⟦\⟧hanako" }</code></pre>
+        </div>
+        <div class="code code--good">
+          <div class="code__head"><span class="code__name">正しい — 2つ重ねる</span><button class="copy" type="button">コピー</button></div>
+          <pre data-lang="json"><code>{ "path": "C:\\Users\\hanako" }</code></pre>
+        </div>
+        <p style="margin-bottom:0">
+          多くのツールでは <span class="kbd">/</span>（スラッシュ）でも動くので、<strong>迷ったら <span class="kbd">C:/Users/hanako</span> と書く</strong>のが安全です。
+        </p>
+      </div>
+    </details>
+
+    <div class="quiz">
+      <p class="quiz__q">Q. 上の設定で、あなたが自由に名前を決めていいのはどれ？</p>
+      <div class="quiz__opts">
+        <button class="quiz__opt" type="button">"mcpServers"</button>
+        <button class="quiz__opt" type="button" data-correct="true">"filesystem"</button>
+        <button class="quiz__opt" type="button">"command"</button>
+      </div>
+      <div class="quiz__fb">
+        <strong>正解："filesystem"</strong><br>
+        これは接続に付けたラベルなので、自分でわかりやすい名前にできます。<span class="kbd">"mcpServers"</span> と <span class="kbd">"command"</span> はツールが決めた名前で、変更すると動きません。
+      </div>
+    </div>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">!</span>ここだけ覚えて</p>
+      <ul>
+        <li>実物も、分解すれば「用紙の中の用紙」でしかない</li>
+        <li>ツールが決めたキー名は<strong>1文字も変えない</strong>。コピペが正解</li>
+        <li>項目を足す・消すときは、<strong>カンマもセットで</strong>足す・消す</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 09 -->
+<section class="tile tile--light" id="ch9" data-num="09" data-title="自分で書いて、確かめる">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 09</p>
+    <h2>自分で書いて、確かめる</h2>
+    <p class="lead">最後のステップ。書いたら<strong>必ず検算する</strong>習慣をつけましょう。</p>
+
+    <p>
+      JSONを書くときの鉄則は、<strong>いきなり全部書かない</strong>こと。
+      骨組みを作ってから中身を埋めると、かっこの数もカンマも狂いません。
+    </p>
+
+    <ol class="steps">
+      <li><strong>外側の <span class="kbd">{ }</span> を先に書く</strong>。この時点で1回、下のチェッカーに通す</li>
+      <li>キーを1つだけ足して、また通す</li>
+      <li>値を埋めて、また通す</li>
+      <li>以降、<strong>1項目足すごとに通す</strong></li>
+    </ol>
+
+    <p>
+      面倒に見えますが、これが最速です。まとめて書いてから直すと、どこで壊れたかわからなくなります。
+    </p>
+
+    <h3>ここで試してください</h3>
+    <p>
+      下の欄にJSONを貼って「チェックする」を押すと、その場で判定します。
+      <strong>この教材のページ内だけで動き、入力内容がどこかに送られることはありません。</strong>
+    </p>
+
+    <div class="checker">
+      <label for="checkerInput" style="display:block;font-weight:600;margin-bottom:8px;letter-spacing:-.012em">JSONを貼り付けてください</label>
+      <textarea id="checkerInput" class="checker__input" spellcheck="false" autocapitalize="off" autocorrect="off">{
+  "name": "Claude",
+  "model": "opus",
+}</textarea>
+      <div class="checker__bar">
+        <button class="btn" type="button" id="checkerRun">チェックする</button>
+        <button class="chip" type="button" id="checkerFormat">整形する</button>
+        <button class="chip" type="button" data-sample="bad-comma">末尾カンマの例</button>
+        <button class="chip" type="button" data-sample="bad-quote">全角クォートの例</button>
+        <button class="chip" type="button" data-sample="bad-comment">コメント入りの例</button>
+        <button class="chip" type="button" data-sample="ok">正しい例</button>
+      </div>
+      <div class="checker__result" id="checkerResult" role="status" aria-live="polite"></div>
+      <p class="checker__hint">
+        判定が通ったら、整形（字下げの揃え直し）もできます。字下げが崩れているファイルは、これで一気に読みやすくなります。
+      </p>
+    </div>
+
+    <div class="callout">
+      <p class="callout__title">AIに書かせるときのコツ</p>
+      <p style="margin:0">
+        自分で1文字ずつ打つより、AIに書かせたほうが速くて正確です。ただし頼み方にコツがあります。<br><br>
+        <strong>「〜という設定のJSONを作って。<u>コードブロックの中にJSONだけを出力し、説明は書かないで</u>」</strong><br><br>
+        こう指定すると、そのままコピペできる状態で返ってきます。そして<strong>貼る前に、必ず上のチェッカーに通してください</strong>。AIも末尾カンマを間違えます。
+      </p>
+    </div>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">!</span>ここだけ覚えて</p>
+      <ul>
+        <li>骨組みから作り、<strong>1項目足すごとに検算する</strong></li>
+        <li>AIに書かせるときは「JSONだけ出力して」と明示する</li>
+        <li>AIの出力も、貼る前に必ずチェックする</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 10 -->
+<section class="tile tile--dark" id="ch10" data-num="10" data-title="チートシート">
+  <div class="wrap">
+    <p class="eyebrow">Chapter 10</p>
+    <h2>チートシート</h2>
+    <p class="lead">困ったときは、ここだけ見れば戻ってこられます。</p>
+
+    <div class="code">
+      <div class="code__head">
+        <span class="code__name">全部入りの見本</span>
+        <button class="copy" type="button">コピー</button>
+      </div>
+      <pre data-lang="json"><code>{
+  "文字列": "クォートで囲む",
+  "数値": 34,
+  "小数": -1.5,
+  "真偽値": true,
+  "値なし": null,
+  "リスト": ["A", "B", "C"],
+  "入れ子": {
+    "中の項目": "用紙の中に用紙"
+  },
+  "最後の項目": "この後ろにカンマは付けない"
+}</code></pre>
+    </div>
+
+    <h3>チェックリスト</h3>
+    <div class="grid grid--2">
+      <div class="card">
+        <h4>書く前に</h4>
+        <p>
+          ・日本語入力はオフ<br>
+          ・Wordではなくテキストエディタで<br>
+          ・公式ドキュメントからコピペする
+        </p>
+      </div>
+      <div class="card">
+        <h4>書いた後に</h4>
+        <p>
+          ・最後の行以外はカンマで終わっているか<br>
+          ・閉じかっこの直前にカンマが無いか<br>
+          ・クォートはすべて半角ダブルか<br>
+          ・チェッカーに通したか
+        </p>
+      </div>
+    </div>
+
+    <h3>迷ったときの早見表</h3>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:46%">こう思ったら</th><th>答え</th></tr></thead>
+        <tbody>
+          <tr><td>クォートは付ける？</td><td><strong>文字列だけ付ける。</strong>数値・true/false・null は裸</td></tr>
+          <tr><td>{ } と [ ] どっち？</td><td>名前で引くなら <span class="kbd">{ }</span>、順番に並べるなら <span class="kbd">[ ]</span></td></tr>
+          <tr><td>カンマはどこに？</td><td>項目と項目の<strong>あいだ</strong>。最後には付けない</td></tr>
+          <tr><td>メモを書きたい</td><td>コメントは不可。<span class="kbd">"_memo"</span> のような項目にする</td></tr>
+          <tr><td>中身が空のとき</td><td><span class="kbd">{}</span> や <span class="kbd">[]</span> と書く。消さない</td></tr>
+          <tr><td>Windowsのパス</td><td><span class="kbd">\\</span> と重ねるか、<span class="kbd">/</span> を使う</td></tr>
+          <tr><td>エラーが出た</td><td>指された行の<strong>1〜2行手前</strong>のカンマを見る</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="remember">
+      <p class="remember__title"><span class="remember__badge">✓</span>おつかれさまでした</p>
+      <ul>
+        <li>JSONは「記入済みの申込用紙」。プログラミングではない</li>
+        <li>キーはダブルクォート、値は6種類、かっこは2種類</li>
+        <li>エラーの9割はカンマ・クォート・全角文字</li>
+        <li>書いたら必ず検算する</li>
+      </ul>
+      <div class="btn-row">
+        <a class="btn btn--ghost" href="#ch9">チェッカーに戻る</a>
+        <a class="btn btn--ghost" href="#top">最初に戻る</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p class="muted" style="font-size:14px;margin:0">JSONがわかると、AIが動き出す — 非エンジニアのためのJSON入門</p>
+    <p class="footer__legal">
+      この教材は JSON の仕様（RFC 8259 / ECMA-404）に基づいて作成しています。
+      設定ファイルの記述例は各ツールの公式ドキュメントを参照していますが、仕様は更新されることがあります。
+      実際に設定する際は、お使いのツールの最新の公式ドキュメントもあわせてご確認ください。
+    </p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- もくじの自動生成 ---------- */
+  var tray = document.getElementById('tray');
+  var trayList = document.getElementById('trayList');
+  var toggle = document.getElementById('navToggle');
+  var sections = [].slice.call(document.querySelectorAll('main section[id][data-title]'));
+
+  sections.forEach(function(sec, i){
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = '#' + sec.id;
+    a.innerHTML = '<span class="tray__num">' + (sec.dataset.num || i) + '</span><span>' + sec.dataset.title + '</span>';
+    li.appendChild(a);
+    trayList.appendChild(li);
+  });
+
+  function setTray(open){
+    document.body.classList.toggle('tray-open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  toggle.addEventListener('click', function(){
+    setTray(!document.body.classList.contains('tray-open'));
+  });
+  tray.addEventListener('click', function(e){
+    if (e.target.closest('a')) setTray(false);
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && document.body.classList.contains('tray-open')) setTray(false);
+  });
+
+  /* ---------- 進捗バー + 現在地 ---------- */
+  var bar = document.getElementById('progress');
+  var links = [].slice.call(trayList.querySelectorAll('a'));
+  var ticking = false;
+
+  function update(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? Math.min(100, (h.scrollTop / max) * 100) : 0) + '%';
+
+    var cur = 0;
+    for (var i = 0; i < sections.length; i++){
+      if (sections[i].getBoundingClientRect().top <= 120) cur = i;
+    }
+    links.forEach(function(a, i){ a.classList.toggle('is-current', i === cur); });
+    ticking = false;
+  }
+  window.addEventListener('scroll', function(){
+    if (!ticking){ ticking = true; requestAnimationFrame(update); }
+  }, {passive:true});
+  window.addEventListener('resize', update, {passive:true});
+
+  /* ---------- JSON シンタックスハイライト ---------- */
+  var RE = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|([{}\[\],:])/g;
+
+  function esc(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function highlight(src){
+    var out = '', last = 0, m;
+    RE.lastIndex = 0;
+    while ((m = RE.exec(src)) !== null){
+      out += esc(src.slice(last, m.index));
+      if (m[1] !== undefined){
+        if (m[2] !== undefined){
+          out += '<span class="tok-key">' + esc(m[1]) + '</span><span class="tok-punc">' + esc(m[2]) + '</span>';
+        } else {
+          out += '<span class="tok-str">' + esc(m[1]) + '</span>';
+        }
+      } else if (m[3] !== undefined){
+        out += '<span class="tok-bool">' + esc(m[3]) + '</span>';
+      } else if (m[4] !== undefined){
+        out += '<span class="tok-num">' + esc(m[4]) + '</span>';
+      } else if (m[5] !== undefined){
+        out += '<span class="tok-punc">' + esc(m[5]) + '</span>';
+      }
+      last = m.index + m[0].length;
+    }
+    out += esc(src.slice(last));
+    return out;
+  }
+
+  [].forEach.call(document.querySelectorAll('pre[data-lang="json"] > code'), function(code){
+    var raw = code.textContent.replace(/^\n/, '').replace(/\s+$/, '');
+    code.dataset.raw = raw;
+    var html = highlight(raw);
+    // ⚠マーカーで囲んだ範囲を「誤り」として赤く表示する
+    html = html.replace(/⟦/g, '<span class="tok-bad">').replace(/⟧/g, '</span>');
+    code.innerHTML = html;
+  });
+
+  /* ---------- コピーボタン ---------- */
+  [].forEach.call(document.querySelectorAll('.copy'), function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block && block.querySelector('code');
+      if (!code) return;
+      var text = (code.dataset.raw || code.textContent).replace(/[⟦⟧]/g, '');
+      var done = function(){
+        var old = btn.textContent;
+        btn.textContent = 'コピーしました';
+        btn.classList.add('is-done');
+        setTimeout(function(){ btn.textContent = old; btn.classList.remove('is-done'); }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, function(){ fallback(text, done); });
+      } else {
+        fallback(text, done);
+      }
+    });
+  });
+  function fallback(text, cb){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly','');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); cb(); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  /* ---------- クイズ ---------- */
+  [].forEach.call(document.querySelectorAll('.quiz'), function(q){
+    var fb = q.querySelector('.quiz__fb');
+    var opts = [].slice.call(q.querySelectorAll('.quiz__opt'));
+    opts.forEach(function(opt){
+      opt.addEventListener('click', function(){
+        opts.forEach(function(o){
+          o.disabled = true;
+          if (o.dataset.correct === 'true') o.classList.add('is-correct');
+        });
+        if (opt.dataset.correct !== 'true') opt.classList.add('is-wrong');
+        if (fb) fb.classList.add('is-shown');
+      });
+    });
+  });
+
+  /* ---------- JSON チェッカー ---------- */
+  var input   = document.getElementById('checkerInput');
+  var runBtn  = document.getElementById('checkerRun');
+  var fmtBtn  = document.getElementById('checkerFormat');
+  var result  = document.getElementById('checkerResult');
+
+  var SAMPLES = {
+    'bad-comma'  : '{\n  "name": "Claude",\n  "model": "opus",\n}',
+    'bad-quote'  : '{\n  ”name”: "Claude",\n  "model": "opus"\n}',
+    'bad-comment': '{\n  // 使うモデル\n  "model": "opus"\n}',
+    'ok'         : '{\n  "name": "Claude",\n  "editor": {\n    "fontSize": 14,\n    "wordWrap": true\n  },\n  "tags": ["AI", "JSON"]\n}'
+  };
+
+  /* 全角記号（文字列の外にあったら必ず誤り） */
+  var FULLWIDTH = {
+    '”':'ダブルクォート','“':'ダブルクォート','＂':'ダブルクォート',
+    '’':'シングルクォート','‘':'シングルクォート',
+    '，':'カンマ','、':'読点','．':'ピリオド','：':'コロン','；':'セミコロン',
+    '｛':'波かっこ','｝':'波かっこ','［':'角かっこ','］':'角かっこ',
+    '（':'かっこ','）':'かっこ','　':'全角スペース'
+  };
+
+  function lineCol(src, idx){
+    var upto = src.slice(0, Math.max(0, idx));
+    var rows = upto.split('\n');
+    return rows.length + '行目 ' + (rows[rows.length - 1].length + 1) + '文字目';
+  }
+
+  /* パーサーより先に、日本語環境で多い誤りを名指しする */
+  function preScan(src){
+    var inStr = false, escaped = false;
+    for (var i = 0; i < src.length; i++){
+      var c = src.charAt(i);
+      if (inStr){
+        if (escaped){ escaped = false; continue; }
+        if (c === '\\'){ escaped = true; continue; }
+        if (c === '"'){ inStr = false; }
+        continue;
+      }
+      if (c === '"'){ inStr = true; continue; }
+
+      if (FULLWIDTH[c]){
+        return { at:i, title:'全角の「' + c + '」が混ざっています',
+          body:'ここは半角の' + FULLWIDTH[c] + 'でなければいけません。見た目がほとんど同じなので気づきにくい誤りです。日本語入力をオフにして打ち直してください。（やらかし5）' };
+      }
+      if (c === "'"){
+        return { at:i, title:'シングルクォート（\') が使われています',
+          body:'JSONで使えるのはダブルクォート " だけです。ほかの言語のコードを貼り付けたときによく起こります。（やらかし3）' };
+      }
+      if (c === '/' && (src.charAt(i+1) === '/' || src.charAt(i+1) === '*')){
+        return { at:i, title:'コメントが書かれています',
+          body:'JSONにコメント機能はありません。メモを残したいときは "_memo": "…" のように、ふつうの項目として書いてください。（やらかし4）' };
+      }
+      if (c === '#'){
+        return { at:i, title:'コメント（#）が書かれています',
+          body:'JSONにコメント機能はありません。"_memo" のような項目に書き換えてください。（やらかし4）' };
+      }
+      if (c === ','){
+        var j = i + 1;
+        while (j < src.length && /\s/.test(src.charAt(j))) j++;
+        var next = src.charAt(j);
+        if (next === '}' || next === ']' || j >= src.length){
+          return { at:i, title:'最後の項目の後ろに、余分なカンマがあります',
+            body:'カンマは「次の項目があります」という合図です。次が無いのに付けるとエラーになります。このカンマを削除してください。（やらかし1）' };
+        }
+      }
+    }
+    return null;
+  }
+
+  var PARSE_HINTS = [
+    [/Expected ['"]?,['"]? or ['"]?[}\]]['"]?/i,
+      'カンマが足りません',
+      '項目と項目のあいだにはカンマ（,）が必要です。<strong>指摘された場所の1つ前の行の末尾</strong>を確認してください。（やらかし2）'],
+    [/(double-quoted property name|property name or)/i,
+      'キーが見つかりません',
+      '「ここにキーが来るはず」という場所に別のものがあります。<strong>余分なカンマ</strong>か、キーのダブルクォート忘れが原因です。（やらかし1・3）'],
+    [/Unexpected end of/i,
+      '途中で終わっています',
+      '<strong>閉じかっこ（} や ]）が足りません。</strong>字下げを揃え直すと、どこが閉じられていないか見つけやすくなります。（やらかし6）'],
+    [/non-whitespace character after/i,
+      'JSONの外側に余計な文字があります',
+      '一番外の閉じかっこより後ろに文字が残っています。AIの返事をコピペしたときに、<strong>前後の説明文まで貼ってしまった</strong>可能性が高いです。（やらかし7）'],
+    [/Unexpected (token|character|string|number)/i,
+      'そこにあってはいけない文字があります',
+      'その位置に書けないものが入っています。かっこの種類、クォートの向き、記号の打ち間違いを確認してください。'],
+    [/Bad control character|control character/i,
+      '文字列の中に、そのままでは書けない文字があります',
+      '文字列の中で改行したいときは、改行せずに <code>\\n</code> と書きます。']
+  ];
+
+  function show(ok, title, bodyHtml){
+    result.className = 'checker__result is-shown ' + (ok ? 'is-ok' : 'is-ng');
+    result.innerHTML = '<h4>' + (ok ? '✓ ' : '✕ ') + title + '</h4>' + bodyHtml;
+  }
+
+  function describe(v){
+    if (Array.isArray(v)) return 'リスト（' + v.length + '件）';
+    if (v === null) return 'null';
+    if (typeof v === 'object') return '入れ子の用紙（項目' + Object.keys(v).length + '個）';
+    if (typeof v === 'string') return '文字列';
+    if (typeof v === 'number') return '数値';
+    if (typeof v === 'boolean') return '真偽値';
+    return typeof v;
+  }
+
+  function check(){
+    var src = input.value;
+    if (!src.trim()){
+      show(false, '何も入力されていません', '<p style="margin:0">JSONを貼り付けてから、もう一度押してください。</p>');
+      return;
+    }
+
+    var pre = preScan(src);
+    if (pre){
+      show(false, pre.title,
+        '<p style="margin:0 0 8px"><strong>場所：' + lineCol(src, pre.at) + '</strong></p>' +
+        '<p style="margin:0">' + pre.body + '</p>');
+      return;
+    }
+
+    try {
+      var parsed = JSON.parse(src);
+      var body;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)){
+        var keys = Object.keys(parsed);
+        body = '<p style="margin:0 0 8px">JSONとして正しい形です。トップレベルの項目は <strong>' + keys.length + '個</strong>。</p><ul style="margin:0;padding-left:1.15em">';
+        keys.slice(0, 8).forEach(function(k){
+          body += '<li><code>' + esc(k) + '</code> … ' + describe(parsed[k]) + '</li>';
+        });
+        if (keys.length > 8) body += '<li>ほか ' + (keys.length - 8) + ' 項目</li>';
+        body += '</ul>';
+      } else if (Array.isArray(parsed)){
+        body = '<p style="margin:0">JSONとして正しい形です。全体が <strong>' + parsed.length + '件のリスト</strong>になっています。</p>';
+      } else {
+        body = '<p style="margin:0">JSONとして正しい形です。ただし全体が ' + describe(parsed) + ' 単体になっています。設定ファイルなら、ふつうは一番外側が <code>{ }</code> です。</p>';
+      }
+      show(true, 'JSONとして正しい形です', body);
+      return parsed;
+    } catch (err){
+      var msg = String(err && err.message || err);
+      var title = '読み取れませんでした', hint = 'エラーメッセージの内容を確認してください。', matched = false;
+
+      /* ブラウザによって文言が違うので、まず自前で判定する */
+      var head = src.replace(/^\s+/, '').charAt(0);
+      if (head && '{["-0123456789tfn'.indexOf(head) === -1){
+        title = 'JSONの外側に余計な文字があります';
+        hint  = 'JSONは <code>{</code> か <code>[</code> で始まらなければいけません。冒頭に説明文などが残っていないか確認してください。（やらかし7）';
+        matched = true;
+      }
+      var m = /position\s+(\d+)/i.exec(msg);
+      if (!matched && m && parseInt(m[1], 10) >= src.replace(/\s+$/, '').length){
+        title = '途中で終わっています';
+        hint  = '<strong>閉じかっこ（} や ]）が足りません。</strong>開いたかっこの数と閉じたかっこの数を数えるか、字下げを揃え直して確認してください。（やらかし6）';
+        matched = true;
+      }
+      for (var i = 0; !matched && i < PARSE_HINTS.length; i++){
+        if (PARSE_HINTS[i][0].test(msg)){ title = PARSE_HINTS[i][1]; hint = PARSE_HINTS[i][2]; matched = true; }
+      }
+      var where = m ? '<p style="margin:0 0 8px"><strong>場所：' + lineCol(src, parseInt(m[1], 10)) + '</strong></p>' : '';
+      show(false, title, where +
+        '<p style="margin:0 0 10px">' + hint + '</p>' +
+        '<p class="checker__hint" style="margin:0">元のメッセージ： <code>' + esc(msg) + '</code></p>');
+      return;
+    }
+  }
+
+  if (input && runBtn){
+    runBtn.addEventListener('click', check);
+
+    fmtBtn.addEventListener('click', function(){
+      var parsed = check();
+      if (parsed === undefined) return;
+      input.value = JSON.stringify(parsed, null, 2);
+      show(true, '整形しました', '<p style="margin:0">字下げを2文字ぶんに揃え直しました。このまま貼り付けて使えます。</p>');
+    });
+
+    [].forEach.call(document.querySelectorAll('[data-sample]'), function(btn){
+      btn.addEventListener('click', function(){
+        input.value = SAMPLES[btn.dataset.sample] || '';
+        check();
+      });
+    });
+  }
+
+  window.__jsonGuide = { highlight: highlight, update: update };
+  update();
+})();
+</script>
+</body>
+</html>
