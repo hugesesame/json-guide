@@ -52,13 +52,14 @@
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Noto Sans Mono",monospace;
 
-  /* ナビの高さ。--nav-total は「バーの見た目の高さ＋端末の安全領域」の合計。
-     env() には必ず 0px のフォールバックを置く（未対応環境では calc() 全体が
-     無効になり、レイアウトが崩れるため） */
+  /* ナビの高さ。安全領域（env(safe-area-inset-*)）は意図的に一切使わない。
+     viewport-fit=cover を指定していないためブラウザが安全領域を管理しており、
+     ページ側で足す必要がない。加えて一部の Android アプリ内ブラウザは
+     この値に誤った数値を返すことがあり、参照するだけで黒帯が伸びる。
+     もし将来 viewport-fit=cover を使うなら、安全領域は height に「含める」の
+     ではなく「加算」すること（box-sizing:border-box のため、含めると
+     文字の入る領域が消えてヘッダーが切れる）。 */
   --nav-h:44px;
-  --safe-top:env(safe-area-inset-top,0px);
-  --safe-bottom:env(safe-area-inset-bottom,0px);
-  --nav-total:calc(var(--nav-h) + var(--safe-top));
 
   /* Code syntax ( 機能上の必要最小限 ) */
   --code-bg:#1d1d1f;
@@ -71,7 +72,7 @@
 }
 
 *,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-total) + 12px)}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-h) + 12px)}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 body{
   margin:0;
@@ -94,12 +95,11 @@ button{font:inherit;color:inherit}
    ============================================================ */
 .global-nav{
   position:fixed;top:0;left:0;right:0;z-index:100;
-  height:var(--nav-total);
+  height:var(--nav-h);
   background:var(--black);
   color:var(--on-dark);
   display:flex;align-items:center;justify-content:space-between;
   padding:0 16px;
-  padding-top:var(--safe-top);
 }
 .global-nav__brand{
   font-size:13px;font-weight:600;letter-spacing:-.01em;
@@ -131,7 +131,7 @@ body.tray-open .nav-toggle__bars::after{transform:translateY(-3.75px) rotate(-45
 
 /* progress line */
 .progress{
-  position:fixed;top:var(--nav-total);left:0;z-index:101;
+  position:fixed;top:var(--nav-h);left:0;z-index:101;
   height:2px;width:0;background:var(--primary);
   transition:width .12s linear;
 }
@@ -144,7 +144,7 @@ body.tray-open .nav-toggle__bars::after{transform:translateY(-3.75px) rotate(-45
   background:rgba(245,245,247,.86);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
   backdrop-filter:saturate(180%) blur(20px);
-  padding:calc(var(--nav-total) + 20px) 20px calc(40px + var(--safe-bottom));
+  padding:calc(var(--nav-h) + 20px) 20px 40px;
   overflow-y:auto;
   opacity:0;visibility:hidden;transform:translateY(-8px);
   transition:opacity .24s ease,transform .24s ease,visibility .24s;
@@ -177,8 +177,6 @@ body.tray-open .tray{opacity:1;visibility:visible;transform:none}
    ============================================================ */
 .tile{
   padding:var(--xxl) 20px;
-  padding-left:max(20px,env(safe-area-inset-left,0px));
-  padding-right:max(20px,env(safe-area-inset-right,0px));
 }
 .tile--light{background:var(--canvas)}
 .tile--parchment{background:var(--parchment)}
@@ -550,7 +548,7 @@ td code,th code{font-family:var(--mono);font-size:13px}
    Hero / footer
    ============================================================ */
 .hero{
-  padding-top:calc(var(--nav-total) + 56px);
+  padding-top:calc(var(--nav-h) + 56px);
   padding-bottom:var(--xxl);
 }
 .hero__meta{
@@ -564,7 +562,7 @@ td code,th code{font-family:var(--mono);font-size:13px}
 
 .footer{
   background:var(--parchment);
-  padding:var(--xxl) 20px calc(var(--xl) + var(--safe-bottom));
+  padding:var(--xxl) 20px var(--xl);
   color:var(--ink-80);
 }
 .footer__legal{font-size:12px;color:var(--ink-48);line-height:1.8;margin-top:var(--lg)}
@@ -574,7 +572,7 @@ td code,th code{font-family:var(--mono);font-size:13px}
    ============================================================ */
 @media (min-width:735px){
   .tile{padding:var(--section) 40px}
-  .hero{padding-top:calc(var(--nav-total) + 88px);padding-bottom:var(--section)}
+  .hero{padding-top:calc(var(--nav-h) + 88px);padding-bottom:var(--section)}
   body{font-size:17px}
 }
 @media (min-width:1069px){

@@ -91,30 +91,52 @@ EOF
   echo
   echo "注: headless Chrome の下限が 500px のため、それ未満の幅は検査できません。"
 
-  # ── ヘッダーと安全領域 ──
-  # ノッチのある端末や LINE のアプリ内ブラウザは env(safe-area-inset-top) に
-  # 値を返す。--safe-top を固定値で差し替えて、その環境を模擬する。
-  # ヘッダーの高さに安全領域を「含めて」しまうと文字がはみ出して切れる。
+  # ── ヘッダー ──
+  # 過去、安全領域（env(safe-area-inset-top)）をヘッダーの高さに含めた結果、
+  # LINE のアプリ内ブラウザで文字が切れた。原因は「一部の Android アプリ内
+  # ブラウザが安全領域に誤った値を返すこと」。現在は viewport-fit=cover を
+  # 指定せず env() も参照しないため、ヘッダーは常に --nav-h の高さになる。
+  # ここではその前提が崩れていないかを確認する。
   echo
-  echo "── ヘッダーと安全領域 ──"
-  for inset in 0px 24px 44px; do
-    cp "$REPO/index.html" "$TMP/nav.html"
-    cat >> "$TMP/nav.html" <<EOF
-<style>:root{--safe-top:$inset}</style>
+  echo "── ヘッダー ──"
+  # 説明用のコメントに書かれた語を拾わないよう、コメントを除いてから判定する
+  CODE="$(perl -0777 -pe 's{/\*.*?\*/}{}gs; s{<!--.*?-->}{}gs' "$REPO/index.html")"
+
+  # grep -q は一致した時点で終了するため、パイプで渡すと上流が SIGPIPE で
+  # 失敗し、pipefail のもとでは「一致したのに失敗」と誤判定される。
+  # ヒアストリングで渡してパイプを作らない。
+  if grep -q 'viewport-fit=cover' <<<"$CODE"; then
+    echo "  NG viewport-fit=cover が復活しています。安全領域の値に依存すると"
+    echo "     アプリ内ブラウザでヘッダーの高さが狂います。"
+  else
+    echo "  OK viewport-fit=cover なし（安全領域はブラウザ任せ）"
+  fi
+  if grep -q 'env(safe-area-inset' <<<"$CODE"; then
+    echo "  NG CSS が env(safe-area-inset-*) を参照しています。"
+  else
+    echo "  OK env(safe-area-inset-*) への依存なし"
+  fi
+
+  cp "$REPO/index.html" "$TMP/nav.html"
+  cat >> "$TMP/nav.html" <<'EOF'
 <script>
 window.addEventListener('load', function(){
   var n = document.querySelector('.global-nav').getBoundingClientRect();
   var b = document.querySelector('.global-nav__brand').getBoundingClientRect();
   var t = document.getElementById('navToggle').getBoundingClientRect();
-  var ok = b.bottom <= n.bottom + 0.5 && t.right <= n.right + 0.5;
-  document.title = 'バー高さ=' + Math.round(n.height) + 'px' +
-    ' 文字の下端=' + Math.round(b.bottom) + 'px' +
-    ' | ' + (ok ? 'OK 収まっている' : 'NG ヘッダーからはみ出している');
+  var want = parseFloat(getComputedStyle(document.documentElement)
+               .getPropertyValue('--nav-h'));
+  var fits = b.bottom <= n.bottom + 0.5 && b.top >= n.top - 0.5 &&
+             t.right <= n.right + 0.5;
+  document.title = 'バー高さ=' + Math.round(n.height) + 'px（想定 ' + want + 'px）' +
+    ' | ' + (Math.abs(n.height - want) < 0.5 && fits
+      ? 'OK 収まっている' : 'NG ヘッダーの高さか中身がずれている');
 });
 </script>
 EOF
-    printf '  安全領域 %-5s  ' "$inset"
-    "$CHROME_BIN" --headless=new --disable-gpu --window-size=500,844 \
+  for w in 500 768 1440; do
+    printf '%5spx  ' "$w"
+    "$CHROME_BIN" --headless=new --disable-gpu --window-size="$w,844" \
       --virtual-time-budget=3000 --dump-dom "file://$TMP/nav.html" 2>/dev/null \
       | grep -o '<title>[^<]*</title>' | sed 's/<[^>]*>//g'
   done
