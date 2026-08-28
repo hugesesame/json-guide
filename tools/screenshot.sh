@@ -81,6 +81,7 @@ window.addEventListener('load', function(){
 });
 </script>
 EOF
+  echo "── 横方向のはみ出し ──"
   for w in 500 768 1024 1440; do
     printf '%5spx  ' "$w"
     "$CHROME_BIN" --headless=new --disable-gpu --window-size="$w,900" \
@@ -89,6 +90,34 @@ EOF
   done
   echo
   echo "注: headless Chrome の下限が 500px のため、それ未満の幅は検査できません。"
+
+  # ── ヘッダーと安全領域 ──
+  # ノッチのある端末や LINE のアプリ内ブラウザは env(safe-area-inset-top) に
+  # 値を返す。--safe-top を固定値で差し替えて、その環境を模擬する。
+  # ヘッダーの高さに安全領域を「含めて」しまうと文字がはみ出して切れる。
+  echo
+  echo "── ヘッダーと安全領域 ──"
+  for inset in 0px 24px 44px; do
+    cp "$REPO/index.html" "$TMP/nav.html"
+    cat >> "$TMP/nav.html" <<EOF
+<style>:root{--safe-top:$inset}</style>
+<script>
+window.addEventListener('load', function(){
+  var n = document.querySelector('.global-nav').getBoundingClientRect();
+  var b = document.querySelector('.global-nav__brand').getBoundingClientRect();
+  var t = document.getElementById('navToggle').getBoundingClientRect();
+  var ok = b.bottom <= n.bottom + 0.5 && t.right <= n.right + 0.5;
+  document.title = 'バー高さ=' + Math.round(n.height) + 'px' +
+    ' 文字の下端=' + Math.round(b.bottom) + 'px' +
+    ' | ' + (ok ? 'OK 収まっている' : 'NG ヘッダーからはみ出している');
+});
+</script>
+EOF
+    printf '  安全領域 %-5s  ' "$inset"
+    "$CHROME_BIN" --headless=new --disable-gpu --window-size=500,844 \
+      --virtual-time-budget=3000 --dump-dom "file://$TMP/nav.html" 2>/dev/null \
+      | grep -o '<title>[^<]*</title>' | sed 's/<[^>]*>//g'
+  done
   exit 0
 fi
 
